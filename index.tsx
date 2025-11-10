@@ -11,6 +11,7 @@ import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slide
 const DEFAULT_PROMPT = 'Improve image quality, lighting, sharpness, color, and details without making it look artificial. Enhance the photo to make it look its best while maintaining a natural appearance.';
 
 const App = () => {
+    const [showLanding, setShowLanding] = useState(true);
     const [activeMode, setActiveMode] = useState<'enhancer' | 'remover'>('enhancer');
     
     // Enhancer State
@@ -22,6 +23,7 @@ const App = () => {
     const [error, setError] = useState<string | null>(null);
     const [isFaceEnhancementEnabled, setIsFaceEnhancementEnabled] = useState(false);
     const [isRestoreEnabled, setIsRestoreEnabled] = useState(false);
+    const [isDeblurEnabled, setIsDeblurEnabled] = useState(false);
     const [upscaleFactor, setUpscaleFactor] = useState<string>('none');
     
     // Background Remover State
@@ -70,6 +72,7 @@ const App = () => {
             setPrompt(DEFAULT_PROMPT);
             setIsFaceEnhancementEnabled(false);
             setIsRestoreEnabled(false);
+            setIsDeblurEnabled(false);
             setUpscaleFactor('none');
         };
         reader.readAsDataURL(file);
@@ -79,7 +82,7 @@ const App = () => {
         if (!imageFile || !prompt) return;
 
         setIsLoading(true);
-        setError(null);
+setError(null);
         setEnhancedImage(null);
 
         try {
@@ -91,6 +94,9 @@ const App = () => {
 
             if (upscaleFactor !== 'none') {
                 finalPrompt += ` Increase the resolution of the image by ${upscaleFactor} while keeping details sharp and natural.`;
+            }
+             if (isDeblurEnabled) {
+                finalPrompt += ` This is a high-priority instruction: Remove all types of blur from the image, including motion blur, focus blur, and camera shake. The final image must be exceptionally sharp and clear, with all details brought into crisp focus.`;
             }
             if (isRestoreEnabled) {
                 finalPrompt += ` Perform an expert-level, full restoration of this photograph. This is a high-priority instruction. Your task is to meticulously repair all signs of damage and degradation.
@@ -154,6 +160,7 @@ const App = () => {
         setPrompt(DEFAULT_PROMPT);
         setIsFaceEnhancementEnabled(false);
         setIsRestoreEnabled(false);
+        setIsDeblurEnabled(false);
         setUpscaleFactor('none');
         if(fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -194,7 +201,7 @@ const App = () => {
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const imagePart = await fileToGenerativePart(bgImageFile);
-            const bgRemovePrompt = 'Your task is to perfectly and accurately remove the background of the provided image. Isolate the main subject with clean, precise edges. The only output should be an image. The output image format MUST be PNG, and its background MUST be transparent. Do not return any other format or a solid background.';
+            const bgRemovePrompt = 'CRITICAL TASK: Your only job is to remove the background from this image. The main subject must be perfectly isolated with clean edges. The output format MUST be a PNG with a fully transparent (alpha) background. Do not output any other format or any background color.';
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image',
@@ -213,7 +220,8 @@ const App = () => {
                 for (const part of parts) {
                     if (part.inlineData) {
                         const base64Image = part.inlineData.data;
-                        const mimeType = part.inlineData.mimeType;
+                        // Force PNG mimeType for transparency, as requested by the model prompt.
+                        const mimeType = 'image/png';
                         setBgRemovedImage(`data:${mimeType};base64,${base64Image}`);
                         foundImage = true;
                         break;
@@ -245,12 +253,15 @@ const App = () => {
         }
     };
 
+    if (showLanding) {
+        return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+    }
 
     return (
         <div className="app-container">
             <header>
                  <h1>
-                    {activeMode === 'enhancer' ? 'AI Image Upscaler & Enhancer' : 'AI Photo Background Remover'}
+                    {activeMode === 'enhancer' ? 'AI Photo Enhancer & Upscaler' : 'AI Photo Background Remover'}
                 </h1>
                 <p>
                     {activeMode === 'enhancer' 
@@ -264,7 +275,7 @@ const App = () => {
                         className={activeMode === 'enhancer' ? 'active' : ''}
                         aria-pressed={activeMode === 'enhancer'}
                     >
-                        Enhancer
+                        Photo Enhancer
                     </button>
                     <button 
                         onClick={() => setActiveMode('remover')} 
@@ -293,6 +304,8 @@ const App = () => {
                                 setIsFaceEnhancementEnabled={setIsFaceEnhancementEnabled}
                                 isRestoreEnabled={isRestoreEnabled}
                                 setIsRestoreEnabled={setIsRestoreEnabled}
+                                isDeblurEnabled={isDeblurEnabled}
+                                setIsDeblurEnabled={setIsDeblurEnabled}
                                 upscaleFactor={upscaleFactor}
                                 setUpscaleFactor={setUpscaleFactor}
                             />
@@ -312,6 +325,61 @@ const App = () => {
                     />
                 )}
             </main>
+        </div>
+    );
+};
+
+const LandingPage = ({ onGetStarted }) => {
+    return (
+        <div className="landing-container">
+            <header className="landing-header">
+                <h1>Unleash Your Photos' True Potential</h1>
+                <p>Effortlessly enhance quality, upscale resolution, and remove backgrounds with the power of AI. Completely free, with unlimited use.</p>
+                <button onClick={onGetStarted} className="btn btn-primary btn-large">Get Started for Free</button>
+            </header>
+
+            <section className="landing-section">
+                <h2>How to Use</h2>
+                <div className="steps-container">
+                    <div className="step-card">
+                        <div className="step-icon">1</div>
+                        <h3>Upload Your Image</h3>
+                        <p>Drag & drop or select any image from your device.</p>
+                    </div>
+                    <div className="step-card">
+                        <div className="step-icon">2</div>
+                        <h3>Customize & Enhance</h3>
+                        <p>Choose your enhancement options and let the AI work its magic.</p>
+                    </div>
+                    <div className="step-card">
+                        <div className="step-icon">3</div>
+                        <h3>Download</h3>
+                        <p>Download your perfected, high-resolution image in seconds.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section className="landing-section">
+                <h2>Why Use Our AI Toolkit?</h2>
+                <div className="features-container">
+                    <div className="feature-card">
+                        <h3>Powerful AI Enhancer</h3>
+                        <p>Fix lighting, sharpen details, restore colors, and upscale resolution for a professional look.</p>
+                    </div>
+                    <div className="feature-card">
+                        <h3>Precise Background Remover</h3>
+                        <p>Instantly create transparent backgrounds with clean, accurate cutouts for any project.</p>
+                    </div>
+                    <div className="feature-card">
+                        <h3>Free for Everyone</h3>
+                        <p>Why is it free? We believe everyone should have access to powerful creative tools. No subscriptions, no watermarks, and no hidden fees. Ever.</p>
+                    </div>
+                    <div className="feature-card">
+                        <h3>Unlimited Enhancements</h3>
+                        <p>If it doesn't work the first time, try again! There are no limits on retries, so you can experiment until your photo is absolutely perfect.</p>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 };
@@ -381,6 +449,8 @@ const EditorComponent = ({
     setIsFaceEnhancementEnabled,
     isRestoreEnabled,
     setIsRestoreEnabled,
+    isDeblurEnabled,
+    setIsDeblurEnabled,
     upscaleFactor,
     setUpscaleFactor,
 }) => {
@@ -455,7 +525,24 @@ const EditorComponent = ({
                         </label>
                     </div>
                     <p className="toggle-description">
-                       Repair old, damaged, or blurry photos by removing scratches, noise, and artifacts.
+                       Repair old, damaged photos by removing scratches, noise, and artifacts.
+                    </p>
+                </div>
+                 <div className="control-group">
+                    <div className="toggle-container">
+                        <label htmlFor="deblur-image-toggle" className="toggle-label">Remove Blur</label>
+                        <label className="toggle-switch">
+                            <input 
+                                type="checkbox" 
+                                id="deblur-image-toggle"
+                                checked={isDeblurEnabled}
+                                onChange={(e) => setIsDeblurEnabled(e.target.checked)}
+                            />
+                            <span className="slider round"></span>
+                        </label>
+                    </div>
+                    <p className="toggle-description">
+                       Significantly reduces motion blur and out-of-focus areas for a sharper image.
                     </p>
                 </div>
                 <div className="control-group">
@@ -510,27 +597,41 @@ const BackgroundRemoverComponent = ({ originalImage, removedImage, isLoading, er
 
     return (
         <div className="bg-remover-container">
-            <div className="image-previews">
-                <div className="image-wrapper">
-                    <img src={originalImage} alt="Original" />
-                    <span className="image-label">Original</span>
-                </div>
-                <div className="image-wrapper">
-                    {removedImage ? (
-                        <div className="checkerboard-bg">
-                           <img src={removedImage} alt="Background Removed" />
+            <div className="preview-area">
+                <ReactCompareSlider
+                    aria-label="Image comparison slider for background removal"
+                    handle={
+                         <div style={{ width: '3px', height: '100%', backgroundColor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                             <div style={{ border: '2px solid white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" style={{ width: '20px', height: '20px', color: 'white' }}>
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                                 </svg>
+                             </div>
+                         </div>
+                     }
+                    itemOne={
+                        <div className="image-wrapper">
+                            <ReactCompareSliderImage src={originalImage} alt="Original" />
+                            <span className="image-label">Original</span>
                         </div>
-                    ) : (
-                        <div className="placeholder"></div>
-                    )}
-                    <span className="image-label">Result</span>
-                    {isLoading && (
-                       <div className="loading-overlay">
-                           <div className="spinner"></div>
-                           <p>Removing background...</p>
-                       </div>
-                    )}
-                </div>
+                    }
+                    itemTwo={
+                        <div className="image-wrapper checkerboard-bg">
+                            {removedImage ? (
+                                <ReactCompareSliderImage src={removedImage} alt="Background Removed" />
+                            ) : (
+                                <div className="placeholder"></div>
+                            )}
+                             <span className="image-label">Result</span>
+                            {isLoading && (
+                               <div className="loading-overlay">
+                                   <div className="spinner"></div>
+                                   <p>Removing background...</p>
+                               </div>
+                            )}
+                        </div>
+                    }
+                />
             </div>
             <div className="bg-remover-actions">
                 <button onClick={onRemoveBackground} className="btn btn-primary" disabled={isLoading}>
@@ -538,7 +639,7 @@ const BackgroundRemoverComponent = ({ originalImage, removedImage, isLoading, er
                 </button>
                 {removedImage && (
                     <a href={removedImage} download="background-removed.png" className="btn btn-secondary">
-                       Download Image
+                       Download Transparent Image
                     </a>
                 )}
                 <button onClick={onReset} className="btn btn-secondary">
