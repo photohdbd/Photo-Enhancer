@@ -37,6 +37,53 @@ body {
   max-width: 1200px;
 }
 
+/* API Key Selector Styles */
+.api-key-selector-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+
+.api-key-selector {
+    background-color: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    max-width: 500px;
+    text-align: center;
+}
+
+.api-key-selector h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.api-key-selector p {
+    color: var(--secondary-text);
+    margin-bottom: 2rem;
+}
+
+.api-key-selector .btn-large {
+    width: 100%;
+}
+
+.billing-info {
+    font-size: 0.875rem;
+    color: var(--secondary-text);
+    margin-top: 1.5rem;
+    margin-bottom: 0 !important;
+}
+
+.billing-info a {
+    color: var(--primary-text);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+
 /* Landing Page Styles */
 .landing-container {
     display: flex;

@@ -3,14 +3,45 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 
 const DEFAULT_PROMPT = 'Improve image quality, lighting, sharpness, color, and details without making it look artificial. Enhance the photo to make it look its best while maintaining a natural appearance.';
 
+const ApiKeySelector = ({ onKeySelected }) => {
+    const handleSelectKey = async () => {
+        // The `openSelectKey` function shows a dialog for the user to select their key.
+        await window.aistudio.openSelectKey();
+        // After the dialog is closed, we assume a key was selected and update the app state.
+        // This helps avoid race conditions where `hasSelectedApiKey` might not be immediately true.
+        onKeySelected();
+    };
+
+    return (
+        <div className="api-key-selector-container">
+            <div className="api-key-selector">
+                <h2>Select Your API Key to Begin</h2>
+                <p>To use the Photo Enhancer, you need to provide a Google AI Studio API key. Your key is stored locally in your browser and is only used for the requests you make.</p>
+                <button onClick={handleSelectKey} className="btn btn-primary btn-large">
+                    Select API Key
+                </button>
+                <p className="billing-info">
+                    You must use an API key from a project with billing enabled.
+                    {' '}
+                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer">
+                        Learn more
+                    </a>.
+                </p>
+            </div>
+        </div>
+    );
+};
+
+
 const App = () => {
+    const [apiKeyReady, setApiKeyReady] = useState(false);
     const [showLanding, setShowLanding] = useState(true);
     const [activeMode, setActiveMode] = useState<'enhancer' | 'remover'>('enhancer');
     
@@ -37,6 +68,14 @@ const App = () => {
     const MAX_FILE_SIZE_MB = 10;
     const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
     
+    useEffect(() => {
+        const checkApiKey = async () => {
+            const hasKey = await window.aistudio.hasSelectedApiKey();
+            setApiKeyReady(hasKey);
+        };
+        checkApiKey();
+    }, []);
+
     // Convert file to base64 (reusable)
     const fileToGenerativePart = async (file: File) => {
         const base64EncodedDataPromise = new Promise((resolve) => {
@@ -82,7 +121,7 @@ const App = () => {
         if (!imageFile || !prompt) return;
 
         setIsLoading(true);
-setError(null);
+        setError(null);
         setEnhancedImage(null);
 
         try {
@@ -145,7 +184,13 @@ setError(null);
 
         } catch (e) {
             console.error(e);
-            setError(`An error occurred during enhancement: ${e.message}`);
+            const errorMessage = e.message || String(e);
+             if (errorMessage.includes('API Key must be set') || errorMessage.includes('Requested entity was not found')) {
+                setError("Your API Key is not valid or has been revoked. Please select a new key to continue.");
+                setApiKeyReady(false);
+            } else {
+                setError(`An error occurred during enhancement: ${errorMessage}`);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -236,7 +281,13 @@ setError(null);
 
         } catch (e) {
             console.error(e);
-            setBgError(`An error occurred: ${e.message}`);
+            const errorMessage = e.message || String(e);
+            if (errorMessage.includes('API Key must be set') || errorMessage.includes('Requested entity was not found')) {
+                setBgError("Your API Key is not valid or has been revoked. Please select a new key to continue.");
+                setApiKeyReady(false);
+            } else {
+                setBgError(`An error occurred: ${errorMessage}`);
+            }
         } finally {
             setBgIsLoading(false);
         }
@@ -252,6 +303,10 @@ setError(null);
             fileInputRef.current.value = "";
         }
     };
+
+    if (!apiKeyReady) {
+        return <ApiKeySelector onKeySelected={() => setApiKeyReady(true)} />;
+    }
 
     if (showLanding) {
         return <LandingPage onGetStarted={() => setShowLanding(false)} />;
